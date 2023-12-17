@@ -26,9 +26,25 @@ namespace net
 	struct PlayerPosition
 	{
 		unsigned int packetNumber = 0;
-		float x;
-		float z;
+		float x = 0.0f;
+		float z = 0.0f;
 		int wantsToShoot; // 0 = no shoot  1 = down   2 = left   3 = up   4 = right
+	};
+
+	struct DeadReckoning
+	{
+		float oldX = 0.0f;
+		float oldZ = 0.0f;
+		float currX = 0.0f;
+		float currZ = 0.0f;
+
+		float xDir = 0.0f;
+		float zDir = 0.0f;
+
+		double timeSinceLastServerUpdate = 0;
+
+		// Position will be currX + dt * direction
+		// Direction is old->curr
 	};
 
 	struct ClientInfo
@@ -54,6 +70,11 @@ namespace net
 		// Positions of players
 		std::vector<PlayerPosition> m_NetworkedPositions;
 
+
+		std::vector<DeadReckoning> m_DeadReckoningHelpers;
+		double timeSinceLastPacket = 0;
+
+
 		bool isPlayerDead(void);
 
 	private:
@@ -67,6 +88,7 @@ namespace net
 		bool m_IsDead = false;
 
 		unsigned int m_LastPacketNum = 0;
+		
 
 		SOCKET m_ServerSocket;
 		sockaddr_in m_ServerAddr;

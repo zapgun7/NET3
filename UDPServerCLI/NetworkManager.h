@@ -32,8 +32,8 @@ namespace net
 		float bX = 50.0f;
 		float bZ = 50.0f; // Offscreen
 
-		float bDirX;
-		float bDirZ;
+		float bDirX = 0.0f;
+		float bDirZ = 0.0f;
 		double timeAlive;
 	};
 

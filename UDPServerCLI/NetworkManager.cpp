@@ -320,7 +320,7 @@ namespace net
 
 		//printf("broadcast!\n");
 
-		m_NextBroadcastTime = currentTime + std::chrono::milliseconds(100);
+		m_NextBroadcastTime = currentTime + std::chrono::milliseconds(200);
 
 		// Add 20 ms to the next broadcast time from now()
 		//m_NextBroadcastTime 

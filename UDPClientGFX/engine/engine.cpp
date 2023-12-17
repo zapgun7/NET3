@@ -141,14 +141,21 @@ void Engine::Update()
 	m_NetworkManager.SendPlayerPositionToServer(transform->position.x, transform->position.z, shootNum);
 	m_NetworkManager.Update();
 
+	m_NetworkManager.timeSinceLastPacket += dt.count();
+
 	for (int i = 0; i < 8; i++)
 	{
 		TransformComponent* transform = m_NetworkedEntities[i]->GetComponent<TransformComponent>();
-		transform->position.x = m_NetworkManager.m_NetworkedPositions[i].x;
-		transform->position.z = m_NetworkManager.m_NetworkedPositions[i].z;
+		//transform->position.x = m_NetworkManager.m_NetworkedPositions[i].x;
+		//transform->position.z = m_NetworkManager.m_NetworkedPositions[i].z;
+		m_NetworkManager.m_DeadReckoningHelpers[i].timeSinceLastServerUpdate += dt.count();
+		transform->position.x = m_NetworkManager.m_DeadReckoningHelpers[i].currX + m_NetworkManager.m_DeadReckoningHelpers[i].xDir * m_NetworkManager.m_DeadReckoningHelpers[i].timeSinceLastServerUpdate;
+		transform->position.z = m_NetworkManager.m_DeadReckoningHelpers[i].currZ + m_NetworkManager.m_DeadReckoningHelpers[i].zDir * m_NetworkManager.m_DeadReckoningHelpers[i].timeSinceLastServerUpdate;
 	}
-// 	TransformComponent* transformm = m_NetworkedEntities[4]->GetComponent<TransformComponent>();
-// 	printf("X: %.3f, Z: %.3f\n", transformm->position.x, transformm->position.z);
+	//printf("%.3f\n", m_NetworkManager.m_DeadReckoningHelpers[4].xDir);
+ 	//TransformComponent* transformm = m_NetworkedEntities[4]->GetComponent<TransformComponent>();
+ 	//printf("X: %.3f, Z: %.3f\n", transformm->position.x, transformm->position.z);
+	//printf("X: %.3f, Z: %.3f\n", m_NetworkManager.m_NetworkedPositions[4].x, m_NetworkManager.m_NetworkedPositions[4].z);
 }
 
 void Engine::Render()
@@ -282,7 +289,7 @@ void Engine::LoadAssets()
 	//
 	// Entities
 	const glm::vec3 origin(0.f);
-	const glm::vec3 offscreen(5, 0, 5);
+	const glm::vec3 offscreen(20, 0, 20);
 	const glm::vec3 unscaled(1.f);
 	const glm::vec3 bulletSize(0.5f);
 	const glm::quat identity(1.f, 0.f, 0.f, 0.f);

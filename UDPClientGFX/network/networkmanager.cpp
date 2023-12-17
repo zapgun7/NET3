@@ -72,6 +72,7 @@ namespace net
 		m_NextSendTime = std::chrono::high_resolution_clock::now();
 
 		m_NetworkedPositions.resize(NUM_PLAYERS * 2);
+		m_DeadReckoningHelpers.resize(NUM_PLAYERS * 2);
 
 		m_Initialized = true;
 	}
@@ -161,7 +162,58 @@ namespace net
 		memcpy(&m_NetworkedPositions[7].x, (const void*)&(buffer[60]), sizeof(float));
 		memcpy(&m_NetworkedPositions[7].z, (const void*)&(buffer[64]), sizeof(float));
 
-		std::cout << "X: " << m_NetworkedPositions[4].x << " Z: " << m_NetworkedPositions[4].z << std::endl;
+		//std::cout << "X: " << m_NetworkedPositions[4].x << " Z: " << m_NetworkedPositions[4].z << std::endl;
+
+
+		// Dead Reckoning helper updates
+
+		printf("%.5f\n", m_DeadReckoningHelpers[0].timeSinceLastServerUpdate);
+
+		double timeSinceLast = m_DeadReckoningHelpers[0].timeSinceLastServerUpdate;
+		// Do players first
+		for (unsigned int i = 0; i < 4; i++)
+		{
+			if ((m_DeadReckoningHelpers[i].currX > 40) && (m_NetworkedPositions[i].x < 40)) // If player respawns
+			{
+				m_DeadReckoningHelpers[i].currX = m_NetworkedPositions[i].x;
+				m_DeadReckoningHelpers[i].currZ = m_NetworkedPositions[i].z;
+			}
+			m_DeadReckoningHelpers[i].oldX = m_DeadReckoningHelpers[i].currX;
+			m_DeadReckoningHelpers[i].oldZ = m_DeadReckoningHelpers[i].currZ;
+
+			m_DeadReckoningHelpers[i].currX = m_NetworkedPositions[i].x;
+			m_DeadReckoningHelpers[i].currZ = m_NetworkedPositions[i].z;
+
+			// Now to calculate new direction
+			m_DeadReckoningHelpers[i].xDir = (m_DeadReckoningHelpers[i].currX - m_DeadReckoningHelpers[i].oldX) * 5.0f * (timeSinceLast / 0.2f); // Have it work on the correct time scale
+			m_DeadReckoningHelpers[i].zDir = (m_DeadReckoningHelpers[i].currZ - m_DeadReckoningHelpers[i].oldZ) * 5.0f * (timeSinceLast / 0.2f); //
+			
+			m_DeadReckoningHelpers[i].timeSinceLastServerUpdate = 0.0f; // Reset this
+		}
+
+		// Now bullets
+
+		for (unsigned int i = 4; i < 8; i++)
+		{
+			if ((m_DeadReckoningHelpers[i].currX > 40) && (m_NetworkedPositions[i - 4].x < 40)) // If bullet has just been fired
+			{
+				m_DeadReckoningHelpers[i].currX = m_NetworkedPositions[i - 4].x;
+				m_DeadReckoningHelpers[i].currZ = m_NetworkedPositions[i - 4].z;
+			}
+
+			m_DeadReckoningHelpers[i].oldX = m_DeadReckoningHelpers[i].currX;
+			m_DeadReckoningHelpers[i].oldZ = m_DeadReckoningHelpers[i].currZ;
+
+			m_DeadReckoningHelpers[i].currX = m_NetworkedPositions[i].x;
+			m_DeadReckoningHelpers[i].currZ = m_NetworkedPositions[i].z;
+
+			// Now to calculate new direction
+			m_DeadReckoningHelpers[i].xDir = (m_DeadReckoningHelpers[i].currX - m_DeadReckoningHelpers[i].oldX) * 5.0f * (timeSinceLast / 0.2f); // Have it work on the correct time scale
+			m_DeadReckoningHelpers[i].zDir = (m_DeadReckoningHelpers[i].currZ - m_DeadReckoningHelpers[i].oldZ) * 5.0f * (timeSinceLast / 0.2f); //
+
+			m_DeadReckoningHelpers[i].timeSinceLastServerUpdate = 0.0f; // Reset this
+		}
+
 
 		bool isDead;
 		memcpy(&isDead, (const void*)&(buffer[68]), sizeof(bool));
@@ -170,6 +222,7 @@ namespace net
 		{
 			m_IsDead = true;
 		}
+		timeSinceLastPacket = 0;
 	}
 
 	void NetworkManager::SendDataToServer()
@@ -180,7 +233,7 @@ namespace net
 			return;
 		}
 
-		m_NextSendTime = currentTime + std::chrono::milliseconds(50);
+		m_NextSendTime = currentTime + std::chrono::milliseconds(200);
 		
 		// Add 20 ms to the next broadcast time from now()
 		//m_NextBroadcastTime 
