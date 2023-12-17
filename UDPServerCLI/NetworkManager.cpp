@@ -244,7 +244,7 @@ namespace net
 		sockaddr_in addr;
 		int addrLen = sizeof(addr);
 
-		const int bufLen = 12;	// recving 2 floats only and an int
+		const int bufLen = 16;	// recving 2 floats only and an int + one more int for the packet number
 		char buffer[bufLen];
 		int result = recvfrom(m_ListenSocket, buffer, bufLen, 0, (SOCKADDR*)&addr, &addrLen);
 		if (result == SOCKET_ERROR) {
@@ -293,9 +293,17 @@ namespace net
 
 		ClientInfo& client = m_ConnectedClients[clientId];
 		
-		memcpy(&client.x, (const void*)&(buffer[0]), sizeof(float));
-		memcpy(&client.z, (const void*)&(buffer[4]), sizeof(float));
-		memcpy(&client.wantsToShoot, (const void*)&(buffer[8]), sizeof(int)); // Copy over the players shooting state
+		unsigned int thisPacketNum;
+		memcpy(&thisPacketNum, (const void*)&(buffer[0]), sizeof(unsigned int));
+
+		if (thisPacketNum < client.lastPacketRecieved) return;
+
+		client.lastPacketRecieved = thisPacketNum;
+
+
+		memcpy(&client.x, (const void*)&(buffer[4]), sizeof(float));
+		memcpy(&client.z, (const void*)&(buffer[8]), sizeof(float));
+		memcpy(&client.wantsToShoot, (const void*)&(buffer[12]), sizeof(int)); // Copy over the players shooting state
 
 		//std::cout << "Shoot: " << client.wantsToShoot << std::endl;
 
@@ -318,29 +326,33 @@ namespace net
 		//m_NextBroadcastTime 
 
 		//const int length = sizeof(PlayerPosition) * 4;
-		const int length = 8 * 8 + 4; // extra 4 for the kill bool
+		const int length = 8 * 8 + 8; // extra 8 for the kill bool and the server reconciliation number
 		char data[length];
 
 
 		PlayerPosition positions[4];
 
+		// Packet number for reconciliation
+		memcpy(&data[0], &m_PacketNum, sizeof(unsigned int));
+		m_PacketNum++;
+
 		for (int i = 0; i < m_ConnectedClients.size(); i++)
 		{
 			//memcpy(&data[i * sizeof(PlayerPosition)], &m_ConnectedClients[i].x, sizeof(float));
 			//memcpy(&data[i * sizeof(PlayerPosition) + sizeof(float)], &m_ConnectedClients[i].z, sizeof(float));
-			memcpy(&data[i * 8], &m_ConnectedClients[i].x, sizeof(float));
-			memcpy(&data[i * 8 + sizeof(float)], &m_ConnectedClients[i].z, sizeof(float));
+			memcpy(&data[i * 8 + 4], &m_ConnectedClients[i].x, sizeof(float));
+			memcpy(&data[i * 8 + sizeof(float) + 4], &m_ConnectedClients[i].z, sizeof(float));
 		}
 		for (int i = 4; i < 4 + m_ConnectedClients.size(); i++)
 		{
-			memcpy(&data[i * 8], &m_ConnectedClients[i - 4].bX, sizeof(float)); //
-			memcpy(&data[i * 8 + sizeof(float)], &m_ConnectedClients[i - 4].bZ, sizeof(float)); // Send bullet locational data
+			memcpy(&data[i * 8 + 4], &m_ConnectedClients[i - 4].bX, sizeof(float)); //
+			memcpy(&data[i * 8 + sizeof(float) + 4], &m_ConnectedClients[i - 4].bZ, sizeof(float)); // Send bullet locational data
 		}
 
 		// Write
 		for (int i = 0; i < m_ConnectedClients.size(); i++)
 		{
-			memcpy(&data[64], &m_ConnectedClients[i].isDead, sizeof(bool)); // Send unique bool to all clients informing them if they're dead
+			memcpy(&data[68], &m_ConnectedClients[i].isDead, sizeof(bool)); // Send unique bool to all clients informing them if they're dead
 			ClientInfo& client = m_ConnectedClients[i];
 			int result = sendto(m_ListenSocket, &data[0], length, 0, (SOCKADDR*)&client.addr, client.addrLen);
 			if (result == SOCKET_ERROR) {

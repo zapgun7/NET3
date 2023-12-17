@@ -25,6 +25,7 @@ namespace net
 
 	struct PlayerPosition
 	{
+		unsigned int packetNumber = 0;
 		float x;
 		float z;
 		int wantsToShoot; // 0 = no shoot  1 = down   2 = left   3 = up   4 = right
@@ -64,6 +65,8 @@ namespace net
 		float m_Wait = 0;
 
 		bool m_IsDead = false;
+
+		unsigned int m_LastPacketNum = 0;
 
 		SOCKET m_ServerSocket;
 		sockaddr_in m_ServerAddr;

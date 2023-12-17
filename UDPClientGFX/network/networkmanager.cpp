@@ -115,7 +115,7 @@ namespace net
 	void NetworkManager::HandleRECV()
 	{
 		// Read
-		const int bufLen = sizeof(float) * 4 * NUM_PLAYERS + 4;
+		const int bufLen = sizeof(float) * 4 * NUM_PLAYERS + 8;
 		char buffer[bufLen];
 		int result = recvfrom(m_ServerSocket, buffer, bufLen, 0, (SOCKADDR*)&m_ServerAddr, &m_ServerAddrLen);
 		if (result == SOCKET_ERROR) {
@@ -131,29 +131,40 @@ namespace net
 			Destroy();
 			return;
 		}
+		unsigned int thisPacketNum;
+		memcpy(&thisPacketNum, (const void*)&(buffer[0]), sizeof(unsigned int));
 
+		// CLIENT-SIDE RECONCILIATION
 
-		memcpy(&m_NetworkedPositions[0].x, (const void*)&(buffer[0]), sizeof(float));
-		memcpy(&m_NetworkedPositions[0].z, (const void*)&(buffer[4]), sizeof(float));
-		memcpy(&m_NetworkedPositions[1].x, (const void*)&(buffer[8]), sizeof(float));
-		memcpy(&m_NetworkedPositions[1].z, (const void*)&(buffer[12]), sizeof(float));
-		memcpy(&m_NetworkedPositions[2].x, (const void*)&(buffer[16]), sizeof(float));
-		memcpy(&m_NetworkedPositions[2].z, (const void*)&(buffer[20]), sizeof(float));
-		memcpy(&m_NetworkedPositions[3].x, (const void*)&(buffer[24]), sizeof(float));
-		memcpy(&m_NetworkedPositions[3].z, (const void*)&(buffer[28]), sizeof(float));
+		//std::cout << thisPacketNum << std::endl;
+
+		if (thisPacketNum < m_LastPacketNum) return;
+
+		m_LastPacketNum = thisPacketNum;
+
+		memcpy(&m_NetworkedPositions[0].x, (const void*)&(buffer[4]), sizeof(float));
+		memcpy(&m_NetworkedPositions[0].z, (const void*)&(buffer[8]), sizeof(float));
+		memcpy(&m_NetworkedPositions[1].x, (const void*)&(buffer[12]), sizeof(float));
+		memcpy(&m_NetworkedPositions[1].z, (const void*)&(buffer[16]), sizeof(float));
+		memcpy(&m_NetworkedPositions[2].x, (const void*)&(buffer[20]), sizeof(float));
+		memcpy(&m_NetworkedPositions[2].z, (const void*)&(buffer[24]), sizeof(float));
+		memcpy(&m_NetworkedPositions[3].x, (const void*)&(buffer[28]), sizeof(float));
+		memcpy(&m_NetworkedPositions[3].z, (const void*)&(buffer[32]), sizeof(float));
 
 		// Bullets
-		memcpy(&m_NetworkedPositions[4].x, (const void*)&(buffer[32]), sizeof(float));
-		memcpy(&m_NetworkedPositions[4].z, (const void*)&(buffer[36]), sizeof(float));
-		memcpy(&m_NetworkedPositions[5].x, (const void*)&(buffer[40]), sizeof(float));
-		memcpy(&m_NetworkedPositions[5].z, (const void*)&(buffer[44]), sizeof(float));
-		memcpy(&m_NetworkedPositions[6].x, (const void*)&(buffer[48]), sizeof(float));
-		memcpy(&m_NetworkedPositions[6].z, (const void*)&(buffer[52]), sizeof(float));
-		memcpy(&m_NetworkedPositions[7].x, (const void*)&(buffer[56]), sizeof(float));
-		memcpy(&m_NetworkedPositions[7].z, (const void*)&(buffer[60]), sizeof(float));
+		memcpy(&m_NetworkedPositions[4].x, (const void*)&(buffer[36]), sizeof(float));
+		memcpy(&m_NetworkedPositions[4].z, (const void*)&(buffer[40]), sizeof(float));
+		memcpy(&m_NetworkedPositions[5].x, (const void*)&(buffer[44]), sizeof(float));
+		memcpy(&m_NetworkedPositions[5].z, (const void*)&(buffer[48]), sizeof(float));
+		memcpy(&m_NetworkedPositions[6].x, (const void*)&(buffer[52]), sizeof(float));
+		memcpy(&m_NetworkedPositions[6].z, (const void*)&(buffer[56]), sizeof(float));
+		memcpy(&m_NetworkedPositions[7].x, (const void*)&(buffer[60]), sizeof(float));
+		memcpy(&m_NetworkedPositions[7].z, (const void*)&(buffer[64]), sizeof(float));
+
+		std::cout << "X: " << m_NetworkedPositions[4].x << " Z: " << m_NetworkedPositions[4].z << std::endl;
 
 		bool isDead;
-		memcpy(&isDead, (const void*)&(buffer[64]), sizeof(bool));
+		memcpy(&isDead, (const void*)&(buffer[68]), sizeof(bool));
 
 		if (isDead)
 		{
@@ -185,6 +196,7 @@ namespace net
 			Destroy();
 			return;
 		}
+		m_PlayerPosition.packetNumber++;
 	}
 
 	bool NetworkManager::isPlayerDead(void)

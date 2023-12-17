@@ -41,6 +41,7 @@ namespace net
 	{
 		sockaddr_in addr;
 		int addrLen;
+		unsigned int lastPacketRecieved = 0;
 	};
 
 	class NetworkManager
@@ -61,6 +62,8 @@ namespace net
 		bool m_Initialized = false;
 		bool m_Connected = false;
 		float m_Wait = 0;
+
+		unsigned int m_PacketNum = 0; //Keeps track of packet order on the client's side; for reconciliation
 
 		SOCKET m_ListenSocket;
 
